@@ -1,4 +1,9 @@
-# Product-Sync
+# Product-Watch
+
+Listen for HubSpot webhooks triggered by the update
+of a Product's description, then propagate this updated
+description to all Line Items associated with that
+Product on all open Deals
 
 ## Setup
 
@@ -15,3 +20,5 @@
    - listen for product.propertyChange → description
 6. Copy Private App API Token
 7. Set as environment var "API_TOKEN" in Lambda
+8. In AWS config, set Handler to "index.ProductEventHandler"
+9. Select Node.js runtime 18.x or higher
