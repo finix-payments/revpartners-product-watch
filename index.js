@@ -1,9 +1,16 @@
-import { getOpenDealIds } from "./deals.js";
+import { getOpenDealIds } from './deals.js'
 import {
-  getProductIdOfLineItem,
-  getLineItemIdsOnDeal,
-  updateLineItemDescription,
-} from "./lineitems.js";
+	getProductIdOfLineItem,
+	getLineItemIdsOnDeal,
+	updateLineItemDescription,
+} from './lineitems.js'
+import { Client } from '@hubspot/api-client'
+import Config from './config.js'
+
+const hsClient = new Client({
+	accessToken: Config.API_TOKEN,
+	numberOfApiCallRetries: 3,
+})
 
 /**
  * Main Lambda Handler function for processing incoming webhook events
@@ -12,53 +19,81 @@ import {
  * @returns {Promise<{ statusCode: number }>} An object with HTTP status code.
  */
 export const productEventHandler = async (event) => {
-  /** @type {PropertyChangeEvent[]} */
-  const body = JSON.parse(event.body);
+	/** @type {PropertyChangeEvent[]} */
+	const body = JSON.parse(event.body)
 
-  // validate req body
-  if (body.length == 0) {
-    console.log("invalid webhook request body");
-    return { statusCode: 400 };
-  }
-  const productId = body[0].objectId.toString();
-  const newDescription = body[0].propertyValue;
-  if (!productId || !newDescription) {
-    console.log("invalid webhook request body");
-    return { statusCode: 400 };
-  }
+	// validate req body
+	if (body.length == 0) {
+		console.log('invalid webhook request body')
+		return { statusCode: 400 }
+	}
 
-  try {
-    await updateProductDescriptionInOpenDeals(productId, newDescription);
-  } catch (error) {
-    console.log(error);
-    return { statusCode: 500 };
-  }
+	// get product id and new description from body
+	const productId = body[0].objectId.toString()
+	const newDescription = body[0].propertyValue
+	if (!productId || !newDescription) {
+		console.log('invalid webhook request body')
+		return { statusCode: 400 }
+	}
 
-  console.log("updates completed successfully");
-  return { statusCode: 200 };
-};
+	try {
+		await updateProductDescriptionInOpenDeals(
+			hsClient,
+			productId,
+			newDescription
+		)
+	} catch (error) {
+		console.log(error)
+		return { statusCode: 500 }
+	}
+
+	console.log('updates completed successfully')
+	return { statusCode: 200 }
+}
 
 /**
  * Updates Product description on Line Items with same Product Id
  *
+ * 1. Get all open deals
+ * 2. Get line items on those deals
+ * 3. Get product id of each line item
+ * 4. Update line item if product id matches
+ *
+ * @param hsClient {Client}
  * @param {string} productId
  * @param {string} newDescription
  * @returns {Promise<void>}
  */
-async function updateProductDescriptionInOpenDeals(productId, newDescription) {
-  const dealIds = await getOpenDealIds();
+async function updateProductDescriptionInOpenDeals(
+	hsClient,
+	productId,
+	newDescription
+) {
+	// get open deals ids
+	const dealIds = await getOpenDealIds(hsClient)
 
-  for (const dealId of dealIds) {
-    const lineItemIds = await getLineItemIdsOnDeal(dealId);
+	for (const dealId of dealIds) {
+		// get line item ids on open deals
+		const lineItemIds = await getLineItemIdsOnDeal(hsClient, dealId)
 
-    for (const lineItemId of lineItemIds) {
-      const lineItemProductId = await getProductIdOfLineItem(lineItemId);
+		// get product id of each line item
+		for (const lineItemId of lineItemIds) {
+			const lineItemProductId = await getProductIdOfLineItem(
+				hsClient,
+				lineItemId
+			)
 
-      if (lineItemProductId == productId) {
-        await updateLineItemDescription(lineItemId, newDescription);
-      }
-    }
-  }
+			// if line item's product id is same as updated product,
+			// update line item description
+			if (lineItemProductId == productId) {
+				await updateLineItemDescription(
+					hsClient,
+					lineItemId,
+					newDescription
+				)
+			}
+		}
+	}
 }
 
 /**

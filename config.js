@@ -1,15 +1,16 @@
-const API_TOKEN = process.env.API_TOKEN;
+import 'dotenv/config'
+const API_TOKEN = process.env.API_TOKEN
 
 /** @type {Config} */
 const Config = {
-  API_TOKEN,
-  PAGE_SIZE: 50,
-  HUBSPOT_BASE_URL: "https://api.hubapi.com",
-  HEADERS: {
-    Authorization: `Bearer ${API_TOKEN}`,
-    "Content-Type": "application/json",
-  },
-};
+	API_TOKEN,
+	PAGE_SIZE: 50,
+	HUBSPOT_BASE_URL: 'https://api.hubapi.com',
+	HEADERS: {
+		Authorization: `Bearer ${API_TOKEN}`,
+		'Content-Type': 'application/json',
+	},
+}
 
 /**
  * @typedef {Object} Config
@@ -19,4 +20,4 @@ const Config = {
  * @property {Object} HEADERS
  */
 
-export default Config;
+export default Config

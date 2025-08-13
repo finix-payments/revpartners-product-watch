@@ -1,18 +1,22 @@
 {
-  "name": "product_watch",
-  "version": "1.0.0",
-  "description": "Responds to HubSpot Product description update webhooks",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon index.js",
-    "build": "node index.js"
-  },
-  "keywords": [],
-  "author": "RevPartners",
-  "license": "ISC",
-  "dependencies": {
-    "axios": "^1.11.0"
-  }
+	"name": "product_watch",
+	"version": "1.0.0",
+	"description": "Responds to HubSpot Product description update webhooks",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "nodemon index.js",
+		"build": "node index.js"
+	},
+	"keywords": [],
+	"author": "RevPartners",
+	"license": "ISC",
+	"dependencies": {
+		"@hubspot/api-client": "^13.0.1",
+		"axios": "^1.11.0",
+		"dotenv": "^17.2.1",
+		"express": "^5.1.0",
+		"prettier": "^3.6.2"
+	}
 }

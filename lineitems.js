@@ -1,67 +1,66 @@
-import axios from "axios";
-import Config from "./config.js";
+import axios from 'axios'
+import Config from './config.js'
+import { Client } from '@hubspot/api-client'
+import { SimplePublicObjectInput } from '@hubspot/api-client/lib/codegen/crm/companies/index.js'
 
 /**
  * Takes Deal Id and gets associated Line Item Ids
  *
+ * @param client {Client}
  * @param {string} dealId
  * @returns {Promise<string[]>}
  */
-export async function getLineItemIdsOnDeal(dealId) {
-  const lineItemIds = new Set();
+export async function getLineItemIdsOnDeal(client, dealId) {
+	const lineItemIds = new Set()
 
-  const res = await axios.get(
-    `${Config.HUBSPOT_BASE_URL}/crm/v3/objects/deals/${dealId}?associations=line_items`,
-    { headers: Config.HEADERS },
-  );
+	const res = await client.crm.deals.basicApi.getById(
+		dealId,
+		undefined,
+		undefined,
+		['line_items']
+	)
 
-  const lineItems = res.data.associations?.["line items"]?.results || [];
-  for (const lineItem of lineItems) {
-    lineItemIds.add(lineItem.id);
-  }
+	const lineItems = res.associations?.['line items']?.results || []
+	for (const lineItem of lineItems) {
+		lineItemIds.add(lineItem.id)
+	}
 
-  return Array.from(lineItemIds);
+	return Array.from(lineItemIds)
 }
 
 /**
  * Gets Product Id of Line Item
  *
+ * @param client {Client}
  * @param {string} lineItemId
  * @returns {Promise<string>}
  */
-export async function getProductIdOfLineItem(lineItemId) {
-  const res = await axios.get(
-    `${Config.HUBSPOT_BASE_URL}/crm/v3/objects/line_items/${lineItemId}?properties=hs_product_id`,
-    { headers: Config.HEADERS },
-  );
+export async function getProductIdOfLineItem(client, lineItemId) {
+	const res = await client.crm.lineItems.basicApi.getById(lineItemId, [
+		'hs_product_id',
+	])
 
-  return res.data.properties.hs_product_id;
+	return res.properties?.hs_product_id || null
 }
 
 /**
  * Updates Line Item with new Product description
  *
+ * @param client {Client}
  * @param {string} lineItemId
  * @param {string} description
  * @returns {Promise<void>}
  */
-export async function updateLineItemDescription(lineItemId, newDescription) {
-  const url = `${Config.HUBSPOT_BASE_URL}/crm/v3/objects/line_items/${lineItemId}`;
+export async function updateLineItemDescription(
+	client,
+	lineItemId,
+	newDescription
+) {
+	await client.crm.lineItems.basicApi.update(lineItemId, {
+		properties: {
+			description: newDescription,
+		},
+	})
 
-  await axios.patch(
-    url,
-    {
-      properties: {
-        description: newDescription,
-      },
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${Config.API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    },
-  );
-
-  console.log(`Updated line item ${lineItemId}`);
+	console.log(`Updated line item ${lineItemId}`)
 }
