@@ -6,9 +6,17 @@ import {
 } from './lineitems.js'
 import { Client } from '@hubspot/api-client'
 import Config from './config.js'
+import AWS from 'aws-sdk'
+
+const sm = new AWS.SecretsManager();
+
+const SECRET_ID = process.env.SECRET_ID;
+let cachedToken = null;
+
+const API_TOKEN = await getApiToken();
 
 const hsClient = new Client({
-	accessToken: Config.API_TOKEN,
+	accessToken: API_TOKEN,
 	numberOfApiCallRetries: 3,
 })
 
@@ -94,6 +102,32 @@ async function updateProductDescriptionInOpenDeals(
 			}
 		}
 	}
+}
+
+/**
+ * Function to read Hubspot API Token from SecretsManager
+ *
+ * @returns {Promise<string>} The HubSpot API token string.
+ */
+async function getApiToken() {
+  if (cachedToken) return cachedToken;
+
+  const resp = await sm.getSecretValue({ SecretId: SECRET_ID }).promise();
+
+  // Secret may be a raw string or JSON object; support both
+  if (resp.SecretString) {
+    try {
+      const obj = JSON.parse(resp.SecretString);
+      cachedToken = obj.API_TOKEN ?? resp.SecretString;
+    } catch {
+      cachedToken = resp.SecretString;
+    }
+  } else if (resp.SecretBinary) {
+    cachedToken = Buffer.from(resp.SecretBinary, 'base64').toString('utf-8');
+  } else {
+    throw new Error('Secret has no value');
+  }
+  return cachedToken;
 }
 
 /**
