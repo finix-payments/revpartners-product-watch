@@ -11,7 +11,7 @@ terraform {
   }
   backend "s3" {
     bucket         = "finix-terraform-qa"
-    key            = "backend.tfstate"
+    key            = "applications/revpartners-product-watch/terraform.tfstate"
     region         = "us-west-2"
     encrypt        = true
     use_lockfile   = true
