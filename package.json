@@ -13,6 +13,7 @@
 	"author": "RevPartners",
 	"license": "ISC",
 	"dependencies": {
+                "@aws-sdk/client-secrets-manager": "^3.664.0",
 		"@hubspot/api-client": "^13.0.1",
 		"axios": "^1.11.0",
 		"dotenv": "^17.2.1",

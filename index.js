@@ -6,10 +6,9 @@ import {
 } from './lineitems.js'
 import { Client } from '@hubspot/api-client'
 import Config from './config.js'
-import AWS from 'aws-sdk'
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 
-const sm = new AWS.SecretsManager();
-
+const sm = new SecretsManagerClient()
 const SECRET_ID = process.env.SECRET_ID;
 let cachedToken = null;
 
@@ -112,21 +111,26 @@ async function updateProductDescriptionInOpenDeals(
 async function getApiToken() {
   if (cachedToken) return cachedToken;
 
-  const resp = await sm.getSecretValue({ SecretId: SECRET_ID }).promise();
+  const resp = await sm.send(
+    new GetSecretValueCommand({ SecretId: SECRET_ID })
+  );
 
-  // Secret may be a raw string or JSON object; support both
+  let str;
   if (resp.SecretString) {
-    try {
-      const obj = JSON.parse(resp.SecretString);
-      cachedToken = obj.API_TOKEN ?? resp.SecretString;
-    } catch {
-      cachedToken = resp.SecretString;
-    }
+    str = resp.SecretString;
   } else if (resp.SecretBinary) {
-    cachedToken = Buffer.from(resp.SecretBinary, 'base64').toString('utf-8');
+    str = Buffer.from(resp.SecretBinary, "base64").toString("utf-8");
   } else {
-    throw new Error('Secret has no value');
+    throw new Error("Secret has no value");
   }
+
+  try {
+    const obj = JSON.parse(str);
+    cachedToken = obj.API_TOKEN ?? str;
+  } catch {
+    cachedToken = str;
+  }
+
   return cachedToken;
 }
 
