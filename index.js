@@ -1,11 +1,12 @@
 import { getOpenDealIds } from './deals.js'
 import {
-	getProductIdOfLineItem,
-	getLineItemIdsOnDeal,
-	updateLineItemDescription,
+	getProductIdOfLineItems,
+	getLineItemIdsOnOpenDeals,
+	updateLineItemsDescription,
 } from './lineitems.js'
 import { Client } from '@hubspot/api-client'
 import Config from './config.js'
+import 'dotenv/config'
 
 const hsClient = new Client({
 	accessToken: Config.API_TOKEN,
@@ -18,7 +19,13 @@ const hsClient = new Client({
  * @param {{ body: string }} event - The event object containing the HTTP request.
  * @returns {Promise<{ statusCode: number }>} An object with HTTP status code.
  */
-export const productEventHandler = async (event) => {
+export async function productEventHandler(event) {
+	// check for API_TOKEN
+	if (Config.API_TOKEN === '' || Config.API_TOKEN === undefined) {
+		console.log('error: API_TOKEN missing')
+		return 500
+	}
+
 	/** @type {PropertyChangeEvent[]} */
 	const body = JSON.parse(event.body)
 
@@ -47,7 +54,7 @@ export const productEventHandler = async (event) => {
 		return { statusCode: 500 }
 	}
 
-	console.log('updates completed successfully')
+	console.log('success')
 	return { statusCode: 200 }
 }
 
@@ -69,31 +76,53 @@ async function updateProductDescriptionInOpenDeals(
 	productId,
 	newDescription
 ) {
-	// get open deals ids
-	const dealIds = await getOpenDealIds(hsClient)
-
-	for (const dealId of dealIds) {
-		// get line item ids on open deals
-		const lineItemIds = await getLineItemIdsOnDeal(hsClient, dealId)
-
-		// get product id of each line item
-		for (const lineItemId of lineItemIds) {
-			const lineItemProductId = await getProductIdOfLineItem(
-				hsClient,
-				lineItemId
-			)
-
-			// if line item's product id is same as updated product,
-			// update line item description
-			if (lineItemProductId == productId) {
-				await updateLineItemDescription(
-					hsClient,
-					lineItemId,
-					newDescription
-				)
-			}
-		}
+	// get Open Deal ids
+	console.log('[1/4] searching open deals...')
+	const dealIds = await getOpenDealIds(hsClient, Config.PAGE_SIZE)
+	if (dealIds.length == 0) {
+		console.log('no open deals found, exiting early\n')
+		return
 	}
+	console.log(`${dealIds.length} open deals found`)
+	console.log()
+
+	// get associated Line Item ids
+	console.log('[2/4] searching for associated Line Items...')
+	const lineItemIds = await getLineItemIdsOnOpenDeals(hsClient, dealIds)
+	if (lineItemIds.length == 0) {
+		console.log('no associated Line Items found, exiting early\n')
+		return
+	}
+	console.log(`${lineItemIds.length} associated Line Items found`)
+	console.log()
+
+	// query for Product Ids of Line Items
+	console.log('[3/4] matching Product Id of Line Items...')
+	const lineItemProductIds = await getProductIdOfLineItems(
+		hsClient,
+		lineItemIds
+	)
+	// match Product Id to original changed Product Id
+	const matchedLineItemIds = lineItemProductIds
+		.filter((item) => item.productId === productId)
+		.map((item) => item.id)
+	console.log(`${matchedLineItemIds.length} matching Line Items found`)
+	if (matchedLineItemIds.length == 0) {
+		console.log('no matching Line Items found, exiting early\n')
+		return
+	}
+	console.log()
+
+	// update matched Line Items
+	console.log('[4/4] updating line items...')
+	await updateLineItemsDescription(
+		hsClient,
+		matchedLineItemIds,
+		newDescription
+	)
+	console.log(matchedLineItemIds.join('\n'))
+	console.log(`sucessfully updated ${matchedLineItemIds.length} Line Items`)
+	console.log()
 }
 
 /**
