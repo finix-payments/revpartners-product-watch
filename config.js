@@ -4,7 +4,7 @@ const API_TOKEN = process.env.API_TOKEN
 /** @type {Config} */
 const Config = {
 	API_TOKEN,
-	PAGE_SIZE: 50,
+	PAGE_SIZE: 100,
 	HUBSPOT_BASE_URL: 'https://api.hubapi.com',
 	HEADERS: {
 		Authorization: `Bearer ${API_TOKEN}`,
