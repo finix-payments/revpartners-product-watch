@@ -1,7 +1,9 @@
 import express from 'express'
+const PORT = 3100
 
-// this is the main exported function to be used in lambda;
-// lambda simulated here for local testing
+// productEventHandler is the main exported function
+// to be used in lambda;
+// lambda simulated here with express for local testing
 import { productEventHandler } from './index.js'
 
 const app = express()
@@ -24,4 +26,4 @@ app.post('/', async (req, res) => {
 	res.sendStatus(code)
 })
 
-app.listen(3100, () => console.log('Listening on port 3100'))
+app.listen(PORT, () => console.log(`Listening on port ${PORT}`))
