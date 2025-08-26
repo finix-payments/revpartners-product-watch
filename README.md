@@ -14,7 +14,6 @@ Product on all open Deals
     - crm.objects.products.read
     - crm.objects.line_items.read/write
     - crm.objects.deals.read/write
-    - crm.objects.quotes.read/write
 5. Register Webhook
     - enter target url (Lambda endpoint)
     - listen for product.propertyChange → description

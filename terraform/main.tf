@@ -27,7 +27,7 @@ resource "aws_lambda_function" "webhook" {
   # Your request: set the handler to index.ProductEventHandler
   handler = "index.productEventHandler"
 
-  timeout = 15
+  timeout = 900
   memory_size = 256
 
   # Environment variable for the webhook

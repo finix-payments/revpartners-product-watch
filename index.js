@@ -7,6 +7,9 @@ import {
 import { Client } from '@hubspot/api-client'
 import Config from './config.js'
 import 'dotenv/config'
+import { ApiThrottler } from './throttler.js'
+
+
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 
 const sm = new SecretsManagerClient()
@@ -50,11 +53,13 @@ export async function productEventHandler(event) {
 		return { statusCode: 400 }
 	}
 
+	const apiThrottler = new ApiThrottler()
 	try {
 		await updateProductDescriptionInOpenDeals(
 			hsClient,
 			productId,
-			newDescription
+			newDescription,
+			apiThrottler
 		)
 	} catch (error) {
 		console.log(error)
@@ -62,6 +67,7 @@ export async function productEventHandler(event) {
 	}
 
 	console.log('success')
+	console.log(`total api requests: ${apiThrottler.totalRequests}`)
 	return { statusCode: 200 }
 }
 
@@ -73,19 +79,25 @@ export async function productEventHandler(event) {
  * 3. Get product id of each line item
  * 4. Update line item if product id matches
  *
- * @param hsClient {Client}
+ * @param {Client} hsClient
  * @param {string} productId
  * @param {string} newDescription
+ * @param {ApiThrottler} apiThrottler
  * @returns {Promise<void>}
  */
 async function updateProductDescriptionInOpenDeals(
 	hsClient,
 	productId,
-	newDescription
+	newDescription,
+	apiThrottler
 ) {
 	// get Open Deal ids
 	console.log('[1/4] searching open deals...')
-	const dealIds = await getOpenDealIds(hsClient, Config.PAGE_SIZE)
+	const dealIds = await getOpenDealIds(
+		hsClient,
+		Config.PAGE_SIZE,
+		apiThrottler
+	)
 	if (dealIds.length == 0) {
 		console.log('no open deals found, exiting early\n')
 		return
@@ -95,25 +107,30 @@ async function updateProductDescriptionInOpenDeals(
 
 	// get associated Line Item ids
 	console.log('[2/4] searching for associated Line Items...')
-	const lineItemIds = await getLineItemIdsOnOpenDeals(hsClient, dealIds)
+	const lineItemIds = await getLineItemIdsOnOpenDeals(
+		hsClient,
+		dealIds,
+		apiThrottler
+	)
 	if (lineItemIds.length == 0) {
 		console.log('no associated Line Items found, exiting early\n')
 		return
 	}
-	console.log(`${lineItemIds.length} associated Line Items found`)
+	console.log(`Associated Line Items found: ${lineItemIds.length}`)
 	console.log()
 
 	// query for Product Ids of Line Items
 	console.log('[3/4] matching Product Id of Line Items...')
 	const lineItemProductIds = await getProductIdOfLineItems(
 		hsClient,
-		lineItemIds
+		lineItemIds,
+		apiThrottler
 	)
 	// match Product Id to original changed Product Id
 	const matchedLineItemIds = lineItemProductIds
 		.filter((item) => item.productId === productId)
 		.map((item) => item.id)
-	console.log(`${matchedLineItemIds.length} matching Line Items found`)
+	console.log(`matching Line Items found: ${matchedLineItemIds.length}`)
 	if (matchedLineItemIds.length == 0) {
 		console.log('no matching Line Items found, exiting early\n')
 		return
@@ -125,10 +142,11 @@ async function updateProductDescriptionInOpenDeals(
 	await updateLineItemsDescription(
 		hsClient,
 		matchedLineItemIds,
-		newDescription
+		newDescription,
+		apiThrottler
 	)
 	console.log(matchedLineItemIds.join('\n'))
-	console.log(`sucessfully updated ${matchedLineItemIds.length} Line Items`)
+	console.log(`sucessfully updated Line Items: ${matchedLineItemIds.length}`)
 	console.log()
 }
 

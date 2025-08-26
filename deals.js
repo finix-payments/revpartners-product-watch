@@ -1,4 +1,5 @@
 import { Client } from '@hubspot/api-client'
+import { ApiThrottler } from './throttler.js'
 
 /**
  * Gets ids all Deals which are not in dealstage
@@ -6,9 +7,10 @@ import { Client } from '@hubspot/api-client'
  *
  * @param {Client} client
  * @param {number} pageSize
+ * @param {ApiThrottler} apiThrottler
  * @returns {Promise<string[]>}
  */
-export async function getOpenDealIds(client, pageSize) {
+export async function getOpenDealIds(client, pageSize, apiThrottler) {
 	let allDeals = []
 	let after = undefined
 
@@ -35,7 +37,10 @@ export async function getOpenDealIds(client, pageSize) {
 			after,
 		}
 
-		const res = await client.crm.deals.searchApi.doSearch(searchBody)
+		const res = await apiThrottler.call(
+			client.crm.deals.searchApi.doSearch,
+			searchBody
+		)
 
 		allDeals.push(...res.results)
 
