@@ -53,21 +53,25 @@ export async function productEventHandler(event) {
 		return { statusCode: 400 }
 	}
 
-	const apiThrottler = new ApiThrottler()
-	try {
-		await updateProductDescriptionInOpenDeals(
-			hsClient,
-			productId,
-			newDescription,
-			apiThrottler
-		)
-	} catch (error) {
-		console.log(error)
-		return { statusCode: 500 }
-	}
+	// Process asynchronously (non-blocking)
+	setTimeout(async () => {
+		try {
+			const apiThrottler = new ApiThrottler()
+			await updateProductDescriptionInOpenDeals(
+				hsClient,
+				productId,
+				newDescription,
+				apiThrottler
+			)
 
-	console.log('success')
-	console.log(`total api requests: ${apiThrottler.totalRequests}`)
+			console.log('success')
+			console.log(`total api requests: ${apiThrottler.totalRequests}`)
+		} catch (error) {
+			console.log(error)
+			return { statusCode: 500 }
+		}
+	}, 0)
+
 	return { statusCode: 200 }
 }
 
